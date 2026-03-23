@@ -39,3 +39,32 @@
 
 # debug information files
 *.dwo
+
+# Build outputs
+*.o
+*.a
+*.so
+*.out
+build/
+bin/
+
+# Sanitizer / debug artifacts
+*.dSYM/
+core
+core.*
+vgcore.*
+
+# Packet capture files — don't commit these
+*.pcap
+*.pcapng
+
+# Editor junk
+.vscode/
+.idea/
+*.swp
+*~
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
