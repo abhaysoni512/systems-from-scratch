@@ -1,93 +1,68 @@
-
 name: CI
 
 on:
-
   push:
-
-    branches: [ main, dev/* ]
-
+    branches:
+      - main
+      - "dev/*"
   pull_request:
-
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-
   build:
-
     name: Build & Test (${{ matrix.compiler }})
-
     runs-on: ubuntu-24.04
 
     strategy:
-
+      fail-fast: false
       matrix:
-
         compiler: [gcc, clang]
 
     steps:
-
       - name: Checkout
-
         uses: actions/checkout@v4
 
       - name: Install dependencies
-
         run: |
-
           sudo apt-get update -qq
-
           sudo apt-get install -y \
-
-            libpcap-dev \
-
-            valgrind \
-
+            build-essential \
             clang \
-
-            cmake
+            cmake \
+            libpcap-dev \
+            valgrind
 
       - name: Build with sanitizers (${{ matrix.compiler }})
-
         run: |
-
+          set -euo pipefail
           for dir in 0*/; do
-
             if [ -f "$dir/Makefile" ]; then
-
               echo "=== Building $dir ==="
-
-              make -C "$dir" CC=${{ matrix.compiler }} \
-
-                CFLAGS="-fsanitize=address,undefined -g -Wall -Wextra"
-
+              make -C "$dir" CC="${{ matrix.compiler }}" CFLAGS="-fsanitize=address,undefined -g -Wall -Wextra"
             fi
-
           done
 
       - name: Run tests
-
         run: |
-
+          set -euo pipefail
           for dir in 0*/; do
-
             if [ -f "$dir/Makefile" ]; then
-
-              make -C "$dir" test 2>/dev/null || true
-
+              if make -C "$dir" -n test >/dev/null 2>&1; then
+                echo "=== Testing $dir ==="
+                make -C "$dir" test
+              else
+                echo "=== No test target in $dir, skipping ==="
+              fi
             fi
-
           done
 
       - name: Valgrind check (gcc only)
-
         if: matrix.compiler == 'gcc'
-
         run: |
-
-          if [ -f "01-memory-allocator/Makefile" ]; then
-
+          set -euo pipefail
+          if [ -f "01-memory-allocator/Makefile" ] && make -C 01-memory-allocator -n valgrind >/dev/null 2>&1; then
             make -C 01-memory-allocator valgrind
-
+          else
+            echo "No valgrind target in 01-memory-allocator, skipping"
           fi
-
